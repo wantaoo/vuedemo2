@@ -1,0 +1,147 @@
+<template>
+	<div class="search">
+        <div class="search-box-wrapper">
+		    <search-box ref="searchBox" @query="onQueryChange"></search-box>
+        </div>
+        <div ref="shortcutWrapper" class="shortcut-wrapper" v-show="!query">
+            <scroll :refreshDelay="refreshDelay" class="shortcut" ref="shortcut">
+                <div class="hot-key">
+                    <h1 class="title">热门搜索</h1>
+                    <ul>
+                        <li @click="addQuery(item.k)" class="item" v-for="item in hotKey">
+                            <span>{{ item.k }}</span>
+                        </li>
+                    </ul>
+                </div>
+                <div v-show="searchHistory.length" class="search-history">
+                  <h1 class="title">
+                    <span class="text">搜索历史</span>
+                    <span class="clear">
+                      <i class="icon-clear"></i>
+                    </span>
+                  </h1>
+                  <search-list :searches="searchHistory"></search-list>
+                   <confirm ref="confirm" @confirm="clearSearchHistory" text="是否清空所有搜索历史" confirmBtnText="清空"></confirm>
+                </div>
+            </scroll>
+        </div>
+        <div ref="searchResult" class="search-result" v-show="query">
+            <suggest ref="suggest" @select="saveSearch" @listScroll="blurInput" :query="query"></suggest>
+        </div>
+        <router-view></router-view>
+	</div>
+</template>
+
+<script type="text/javascript">
+	  import SearchBox from '../../base/search-box/search-box.vue'
+    import {getHotKey} from '../../api/search.js'
+    import {ERR_OK} from '../../api/config.js'
+    import Suggest from '../../components/suggest/suggest.vue'
+    import {mapActions} from 'vuex'
+    import SearchList from '../../base/search-list/search-list.vue'
+    import {playlistMixin,searchMixin} from '../../common/js/mixin.js'
+    import Scroll from '../../base/scroll/scroll.vue'
+    import Confirm from '../../base/confirm/confirm.vue'
+
+    export default{
+        mixins: [playlistMixin,searchMixin],
+        components: {
+            SearchBox,
+            Suggest,
+            SearchList,
+            Scroll,
+            Confirm
+        },
+        computed: {
+          shortcut() {
+            return this.hotKey.concat(this.searchHistory)
+          }
+        },
+        data(){
+            return {
+                hotKey: []
+            }
+        },
+        created(){
+            this._getHotKey()
+        },
+        methods: {
+            //"""给自定义子组件加上 ref 就可调用子组件里的 methods """
+            //在这里调用了子组件 search-box 里的 setQuery() 方法
+            addQuery(query){
+                this.$refs.searchBox.setQuery(query)
+            },
+            showConfirm() {
+              this.$refs.confirm.show()
+            },
+            handlePlaylist(playlist){
+              const bottom = this.$refs.shortcutWrapper.style.bottom = bottom
+              this.$refs.shortcut.refresh()
+              this.$refs.shortcutWrapper.style.bottom = bottom     
+              this.$refs.suggest.refresh()        
+            },
+            _getHotKey(){
+              getHotKey().then((res) => {
+                  if(res.code === ERR_OK){
+                     this.hotKey = res.data.hotkey.slice(0, 10)
+                  }
+              })
+            },
+            ...mapActions([
+              'clearSearchHistory'
+            ])
+        }
+    }
+</script>
+
+<style scoped lang="stylus">
+  @import "~common/stylus/variable"
+  @import "~common/stylus/mixin"
+
+  .search
+    .search-box-wrapper
+      margin: 20px
+    .shortcut-wrapper
+      position: fixed
+      top: 178px
+      bottom: 0
+      width: 100%
+      .shortcut
+        height: 100%
+        overflow: hidden
+        .hot-key
+          margin: 0 20px 20px 20px
+          .title
+            margin-bottom: 20px
+            font-size: $font-size-medium
+            color: white
+          .item
+            display: inline-block
+            padding: 5px 10px
+            margin: 0 20px 10px 0
+            border-radius: 6px
+            background: #d7c4b9
+            font-size: $font-size-medium
+            color: black
+        .search-history
+          position: relative
+          margin: 0 20px
+          .title
+            display: flex
+            align-items: center
+            height: 40px
+            font-size: $font-size-medium
+            color: white
+            .text
+              flex: 1
+            .clear
+              extend-click()
+              .icon-clear
+                font-size: $font-size-medium
+                color: #806e63
+    .search-result
+      position: fixed
+      width: 100%
+      top: 178px
+      bottom: 0
+</style>
