@@ -1,4 +1,4 @@
-# Vue Music
+# Vue Music（移动端）
 
 ## 预览地址
 
